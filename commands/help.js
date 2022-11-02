@@ -9,7 +9,7 @@ module.exports = {
 		const attackembed = new Discord.MessageEmbed()
             .setTitle("Help.")
             .setColor('#9F2B68')
-            .setDescription("*Usage for L7:*\n.L7 TARGET TIME METHOD\n*Usage for L4:*\n.L4 TARGET PORT TIME METHOD")
+            .setDescription("*Usage: !leech magnet_url")
 		message.channel.send({ embeds: [attackembed] });
     }
 }
