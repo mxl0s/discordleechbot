@@ -1,4 +1,13 @@
 {
     "prefix":".",
-    "token":"OTkxNjMxNTU3OTM4OTI1NTg4.GBxOCy.Gy70Ce-IZF8tz7dHViWhj1rSm20Bi_zAtrmrMc"
+    "token":"MTAzNzM4MjcyNzE2MDMwMzc4OA.GpuoOT.TK4ssaHtfEpwAcWZi6SoI8VTFQBrIEA0YsQMfQ",
+    "dir": {
+        "commands":"./commands",
+        "events":"./events",
+        "modules":"./modules",
+        "devDir":"../dev",
+        "prodDir":"../prod"
+    },
+    "guild_id": "1037376982922575882",
+    "client_id": "1037382727160303788"
 }
