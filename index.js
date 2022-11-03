@@ -1,66 +1,72 @@
-const { prefix, token } = require("./config.json");
-
-const { Client, Intents, Collection } = require('discord.js');
-const bot = new Client({ 
-    intents: [
-        Intents.FLAGS.GUILDS, 
-        Intents.FLAGS.GUILD_MESSAGES,
-        Intents.FLAGS.GUILD_MEMBERS
-    ] 
-});
-
 const fs = require("fs");
+const { Client, Collection, Intents } = require("discord.js");
+const { REST } = require("@discordjs/rest");
+const { Routes } = require("discord-api-types/v9");
+const { token, client_id, guild_id } = require("./config.json");
 
-bot.commands = new Collection();
-
-const commandFiles = fs.readdirSync('./commands/').filter(f => f.endsWith('.js'))
-for (const file of commandFiles) {
-    const props = require(`./commands/${file}`)
-    console.log(`${file} loaded`)
-    bot.commands.set(props.config.name, props)
-}
-
-const commandSubFolders = fs.readdirSync('./commands/').filter(f => !f.endsWith('.js'))
-
-commandSubFolders.forEach(folder => {
-    const commandFiles = fs.readdirSync(`./commands/${folder}/`).filter(f => f.endsWith('.js'))
-    for (const file of commandFiles) {
-        const props = require(`./commands/${folder}/${file}`)
-        console.log(`${file} loaded from ${folder}`)
-        bot.commands.set(props.config.name, props)
-    }
+const client = new Client({
+  intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
 });
 
-// Load Event files from events folder
-const eventFiles = fs.readdirSync('./events/').filter(f => f.endsWith('.js'))
+const eventFiles = fs
+  .readdirSync("./events")
+  .filter((file) => file.endsWith(".js"));
+
 for (const file of eventFiles) {
-    const event = require(`./events/${file}`)
-    if(event.once) {
-        bot.once(event.name, (...args) => event.execute(...args, bot))
-    } else {
-        bot.on(event.name, (...args) => event.execute(...args, bot))
-    }
+  const event = require(`./events/${file}`);
+  if (event.once) {
+    client.once(event.name, (...args) => event.execute(...args, client));
+  } else {
+    client.on(
+      event.name,
+      async (...args) => await event.execute(...args, client)
+    );
+  }
 }
 
-//Command Manager
-bot.on("messageCreate", async message => {
-    //Check if author is a bot or the message was sent in dms and return
-    if(message.author.bot) return;
-    if(message.channel.type === "dm") return;
-	if (message.channel.id !== '991628234284347393' && message.channel.id !== '928337989891948544' && message.channel.id !== '992870631601360927' && message.channel.id !== '994592197359972354' && message.channel.id !== '999092086534045776') return;
-    //get prefix from config and prepare message so it can be read as a command
-    let messageArray = message.content.split(" ");
-    let cmd = messageArray[0];
-    let args = messageArray.slice(1);
+const slashCommands = fs.readdirSync("./commands/");
+client.slashCommands = new Collection();
 
-    //Check for prefix
-    if(!cmd.startsWith(prefix)) return;
+for (const module of slashCommands) {
+  const commandFiles = fs
+    .readdirSync(`./commands/${module}`)
+    .filter((file) => file.endsWith(".js"));
 
-    //Get the command from the commands collection and then if the command is found run the command file
-    let commandfile = bot.commands.get(cmd.slice(prefix.length));
-    if(commandfile) commandfile.run(bot,message,args);
+  for (const commandFile of commandFiles) {
+    const command = require(`./commands/${module}/${commandFile}`);
+    client.slashCommands.set(command.data.name, command);
+  }
+}
 
-});
+const rest = new REST({ version: "9" }).setToken(token);
 
-//Token needed in config.json
-bot.login(token);
+const commandJsonData = [
+  ...Array.from(client.slashCommands.values()).map((c) => c.data.toJSON()),
+];
+
+(async () => {
+  try {
+    console.log("Started refreshing application (/) commands.");
+
+    await rest.put(
+      /**
+			 * Here we are sending to discord our slash commands to be registered.
+					There are 2 types of commands, guild commands and global commands.
+					Guild commands are for specific guilds and global ones are for all.
+					In development, you should use guild commands as guild commands update
+					instantly, whereas global commands take upto 1 hour to be published. To
+					deploy commands globally, replace the line below with:
+				Routes.applicationCommands(client_id)
+			 */
+
+      Routes.applicationGuildCommands(client_id, guild_id),
+      { body: commandJsonData }
+    );
+
+    console.log("Successfully reloaded application (/) commands.");
+  } catch (error) {
+    console.error(error);
+  }
+})();
+
+client.login(token);
